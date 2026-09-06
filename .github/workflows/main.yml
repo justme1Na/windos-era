@@ -1,0 +1,103 @@
+name: Windows For Code Virtual
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - name: Configurar Terminal a Pem y Activar Modo Oscuro
+        shell: powershell
+        run: |
+          # 1. Prompt de la consola a Pem>
+          $ProfilePath = $PROFILE.CurrentUserAllHosts
+          $ProfileDir = Split-Path $ProfilePath
+          if (!(Test-Path $ProfileDir)) { New-Item -ItemType Directory -Path $ProfileDir -Force }
+          'function prompt { "Pem> " }' | Out-File -FilePath $ProfilePath -Encoding utf8 -Force
+
+          # 2. Forzar modo oscuro en Windows
+          Set-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Themes\Personalize" -Name "AppsUseLightTheme" -Value 0 -Force
+          Set-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Themes\Personalize" -Name "SystemUsesLightTheme" -Value 0 -Force
+          Write-Host "Terminal de Pem y Modo Oscuro listos."
+
+      - name: Descargar Remotly a Downloads
+        shell: powershell
+        run: |
+          $downloadsPath = "$env:USERPROFILE\Downloads"
+          if (-not (Test-Path -Path $downloadsPath)) {
+              New-Item -ItemType Directory -Path $downloadsPath -Force
+          }
+
+          $remotlyUrl = "https://remotly.com/es/descarga-remotly?target=installer"
+          $remotlyOut = "$downloadsPath\RemotlyInstaller.exe"
+          
+          curl.exe -L -o $remotlyOut $remotlyUrl
+          Write-Host "Remotly guardado correctamente en: $remotlyOut"
+
+      - name: Instalar RustDesk con Chocolatier
+        shell: powershell
+        run: |
+          # Instalar mediante gestor oficial para evitar bloqueos
+          choco install rustdesk -y --no-progress
+          Start-Sleep -Seconds 5
+
+      - name: Iniciar Ventana de RustDesk y Asignar Clave
+        shell: powershell
+        run: |
+          $rustdeskPath = "C:\Program Files\RustDesk\rustdesk.exe"
+
+          # Configurar contraseña fija
+          & $rustdeskPath --password "Goosito123!"
+          Start-Sleep -Seconds 3
+
+          # Iniciar servicio y abrir la ventana gráfica de RustDesk
+          Start-Process -FilePath $rustdeskPath -Verb RunAs
+          Start-Sleep -Seconds 10
+
+      - name: Tomar Captura de Pantalla para Artifacts
+        shell: powershell
+        run: |
+          $rustdeskPath = "C:\Program Files\RustDesk\rustdesk.exe"
+          
+          # Intentar extraer ID sin romper el script
+          $rustdeskId = "Ver en la foto"
+          try {
+              $rustdeskId = & $rustdeskPath --get-id
+          } catch {
+              $rustdeskId = "Revisar imagen adjunta"
+          }
+
+          echo "ID RUSTDESK: $rustdeskId" > info_conexion.txt
+          echo "CONTRASEÑA: Goosito123!" >> info_conexion.txt
+
+          # Captura de pantalla nativa
+          Add-Type -AssemblyName System.Drawing
+          Add-Type -AssemblyName System.Windows.Forms
+          $screen = [System.Windows.Forms.Screen]::PrimaryScreen
+          $bitmap = New-Object System.Drawing.Bitmap $screen.Bounds.Width, $screen.Bounds.Height
+          $graphics = [System.Drawing.Graphics]::FromImage($bitmap)
+          $graphics.CopyFromScreen($screen.Bounds.Location, [System.Drawing.Point]::Empty, $screen.Bounds.Size)
+          $bitmap.Save("captura_rustdesk.png", [System.Drawing.Imaging.ImageFormat]::Png)
+          $graphics.Dispose()
+          $bitmap.Dispose()
+
+      - name: Subir Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: RustDesk-Captura
+          path: |
+            info_conexion.txt
+            captura_rustdesk.png
+
+      - name: Mantener Sesión Activa (6 Horas)
+        shell: powershell
+        run: |
+          $wscript = New-Object -ComObject Wscript.Shell
+          $totalMinutes = 360
+          For ($i = 1; $i -le $totalMinutes; $i++) {
+              Start-Sleep -Seconds 60
+              $wscript.SendKeys("{F15}")
+              Write-Host "Sesión de Pem corriendo... ($i / $totalMinutes min)"
+          }
+          
