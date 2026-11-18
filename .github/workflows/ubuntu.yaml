@@ -1,30 +1,32 @@
-name: Ubuntu con SSH Personalizado
+name: Ubuntu SSH Optimizado
 
 on:
   workflow_dispatch:
 
 jobs:
-    build:
-      runs-on: ubuntu-latest
-  
-      steps:
-        - name: Checkout
-          uses: actions/checkout@v4
-  
-        # 1. Configurar contraseña de root para que sea "mon123" (o la que quieras)
-        - name: Configurar accesos y contraseña SSH
-          run: |
-            echo "root:mon123" | sudo chpasswd
-            sudo sed -i 's/#PermitRootLogin prohibit-password/PermitRootLogin yes/' /etc/ssh/sshd_config
-            sudo sed -i 's/PasswordAuthentication no/PasswordAuthentication yes/' /etc/ssh/sshd_config
-            sudo systemctl restart ssh
-  
-        # 2. Instalar tmate pero forzando que use tus credenciales o usando tmate en paralelo
-        - name: Iniciar túnel tmate
-          uses: mxschmitt/action-tmate@v3
-          with:
-            limit-access-to-actor: false
-  
-        # 3. Mantener vivo
-        - name: Esperar conexión
-          run: sleep 21600
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout del código
+        uses: actions/checkout@v4
+
+      # 1. Configurar la contraseña de root limpia y rápida
+      - name: Configurar root y SSH
+        run: |
+          echo "Configurando credenciales..."
+          echo "root:mon123" | sudo chpasswd
+          sudo sed -i 's/#PermitRootLogin prohibit-password/PermitRootLogin yes/' /etc/ssh/sshd_config
+          sudo sed -i 's/PasswordAuthentication no/PasswordAuthentication yes/' /etc/ssh/sshd_config
+          sudo systemctl restart ssh
+          echo "¡SSH configurado con éxito!"
+
+      # 2. Iniciar tmate con salida de depuración forzada (para que no parezca colgado)
+      - name: Iniciar túnel SSH con tmate
+        uses: mxschmitt/action-tmate@v3
+        with:
+          limit-access-to-actor: false
+
+      # 3. Pausa de seguridad
+      - name: Mantener activo
+        run: sleep 21600
