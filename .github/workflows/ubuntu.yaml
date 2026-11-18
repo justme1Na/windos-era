@@ -1,4 +1,4 @@
-name: Ubuntu SSH Optimizado
+name: Ubuntu Pro SSH
 
 on:
   workflow_dispatch:
@@ -11,22 +11,29 @@ jobs:
       - name: Checkout del código
         uses: actions/checkout@v4
 
-      # 1. Configurar la contraseña de root limpia y rápida
-      - name: Configurar root y SSH
+      # 1. Configurar tu contraseña de root y asegurar que el servicio SSH esté activo
+      - name: Configurar accesos root
         run: |
-          echo "Configurando credenciales..."
+          echo "=== Configurando contraseña root ==="
           echo "root:mon123" | sudo chpasswd
           sudo sed -i 's/#PermitRootLogin prohibit-password/PermitRootLogin yes/' /etc/ssh/sshd_config
           sudo sed -i 's/PasswordAuthentication no/PasswordAuthentication yes/' /etc/ssh/sshd_config
           sudo systemctl restart ssh
-          echo "¡SSH configurado con éxito!"
+          echo "¡Contraseña establecida y SSH reiniciado con éxito!"
 
-      # 2. Iniciar tmate con salida de depuración forzada (para que no parezca colgado)
-      - name: Iniciar túnel SSH con tmate
+      # 2. Instalar herramientas útiles que seguro vas a necesitar en tu prueba (Python, curl, git, etc.)
+      - name: Instalar utilidades base
+        run: |
+          sudo apt-get update && sudo apt-get install -y curl wget git python3-pip htop
+
+      # 3. Lanzar tmate con depuración explícita
+      - name: Iniciar túnel tmate en vivo
         uses: mxschmitt/action-tmate@v3
         with:
           limit-access-to-actor: false
 
-      # 3. Pausa de seguridad
-      - name: Mantener activo
-        run: sleep 21600
+      # 4. Pausa por seguridad para mantener la máquina viva
+      - name: Mantener sesión activa
+        run: |
+          echo "Sesión finalizada o tiempo agotado."
+          sleep 21600
