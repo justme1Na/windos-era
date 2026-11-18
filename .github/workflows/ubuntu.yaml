@@ -1,0 +1,30 @@
+name: Ubuntu con SSH Personalizado
+
+on:
+  workflow_dispatch:
+
+jobs:
+    build:
+      runs-on: ubuntu-latest
+  
+      steps:
+        - name: Checkout
+          uses: actions/checkout@v4
+  
+        # 1. Configurar contraseña de root para que sea "mon123" (o la que quieras)
+        - name: Configurar accesos y contraseña SSH
+          run: |
+            echo "root:mon123" | sudo chpasswd
+            sudo sed -i 's/#PermitRootLogin prohibit-password/PermitRootLogin yes/' /etc/ssh/sshd_config
+            sudo sed -i 's/PasswordAuthentication no/PasswordAuthentication yes/' /etc/ssh/sshd_config
+            sudo systemctl restart ssh
+  
+        # 2. Instalar tmate pero forzando que use tus credenciales o usando tmate en paralelo
+        - name: Iniciar túnel tmate
+          uses: mxschmitt/action-tmate@v3
+          with:
+            limit-access-to-actor: false
+  
+        # 3. Mantener vivo
+        - name: Esperar conexión
+          run: sleep 21600
